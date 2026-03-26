@@ -25,7 +25,7 @@ MPC is useful to implement the following concepts:
 
 ### Account abstraction
 - [ ] NEAR key
-- [ ] Tempo account abstraction
+- [~] Tempo account abstraction [investigation](./human-investigation/tempo-passkeys.md)
 - [ ] Worldcoin
 - [x] zkLogin [investigation](./human-investigation/zkLogin.md)
 - [ ] Aptos Keyless
