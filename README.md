@@ -27,7 +27,7 @@ MPC is useful to implement the following concepts:
 - [ ] NEAR key
 - [ ] Tempo account abstraction
 - [ ] Worldcoin
-- [ ] zkLogin
+- [x] zkLogin [investigation](./human-investigation/zkLogin.md)
 - [ ] Aptos Keyless
 - [ ] Lace SDK
 - [ ] MoonPay OpenWalletStandard(OWS)
