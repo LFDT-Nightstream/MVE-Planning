@@ -57,8 +57,8 @@ The fundamental incompatibility: hardware-backed passkeys produce P-256 signatur
 
 A Tempo Account is a **keychain** of authorized keys, managed by the Account Keychain precompile at `0xAAAAAAAA00000000000000000000000000000000`:
 
-- **Root Key** (`keyId = address(0)`): The original key that created the account. Full authority — can authorize new keys, revoke keys, update spending limits.
-- **Access Keys**: Secondary keys authorized by the Root Key. Support multiple signature types (secp256k1, P-256, WebAuthn). Each can have:
+- **Root Key** (`keyId = address(0)`): The passkey (P-256/WebAuthn) that created the account. This is the user's biometric-backed key (Face ID, Touch ID, YubiKey). Full authority — can authorize new keys, revoke keys, update spending limits.
+- **Access Keys** (aka session keys): Secondary keys authorized by the Root Key. Support multiple signature types (secp256k1, P-256, WebAuthn). Each can have:
   - Expiry timestamps
   - Per-token spending limits
   - Scoped permissions
@@ -129,15 +129,15 @@ For Midnight to adopt passkey-based accounts similar to Tempo:
 
 ### Protocol-Level
 
-- [ ] **P-256 signature verification** in Nightstream / consensus rules
-- [ ] **Address derivation** that accepts P-256 public keys (ETH-style or a Midnight equivalent)
-- [ ] **Multiple signature algorithm support** in transaction validation (at minimum P-256; optionally also secp256k1 and WebAuthn)
-- [ ] **Account abstraction** — keychain model with root keys and access keys, or equivalent
+- [ ] **P-256 signature verification** in Nightstream / consensus rules — this is what passkeys (the root key) produce
+- [ ] **Address derivation** that accepts P-256 public keys (ETH-style or a Midnight equivalent) — the account address is derived from the passkey's P-256 public key
+- [ ] **Multiple signature algorithm support** in transaction validation (at minimum P-256 for the passkey root key; optionally also secp256k1 and WebAuthn for access keys)
+- [ ] **Account abstraction** — keychain model where the passkey is the root key, and access keys (session keys) can be authorized for scoped, time-limited use by dApps and other devices
 
 ### Client-Side
 
-- [ ] **WebAuthn integration** — use `webauthx` or similar for passkey registration/authentication
-- [ ] **Wallet SDK** — either adapt Porto SDK or build equivalent that targets Midnight instead of Ethereum RPCs
+- [ ] **WebAuthn integration** — use `webauthx` or similar for passkey registration (creating the root key) and authentication (signing with it)
+- [ ] **Wallet SDK** — either adapt Porto SDK or build equivalent that targets Midnight instead of Ethereum RPCs. This is what manages the passkey root key and issues access keys (session keys) to dApps.
 - [ ] **Wagmi/Viem adapter** — if reusing the wevm stack, need a Midnight chain definition + RPC transport
 
 ### Considerations
