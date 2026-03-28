@@ -21,7 +21,7 @@ MPC is useful to implement the following concepts:
 - [ ] NEAR MPC
 - [ ] Decrec
 - [ ] Taceo
-- [ ] Which MPC is good for Nightstream in general
+- [x] Which MPC is good for Nightstream in general [investigation](./human-investigation/mpc.md)
 
 ### Account abstraction
 - [ ] NEAR key
