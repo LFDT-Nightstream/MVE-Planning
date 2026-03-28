@@ -17,7 +17,7 @@ MPC is useful to implement the following concepts:
   - DeFi (ex: order matching in a private DEX)
   - Oracle/identity (zkTLS)
 
-#### Investigations
+We have the following investigations:
 - [ ] NEAR MPC
 - [ ] Decrec
 - [ ] Taceo
@@ -38,6 +38,7 @@ MPC is useful to implement the following concepts:
 - [ ] Add credential to Apple Wallet feasibility
 - [ ] zkME (and other groth16 approaches?)
 - [ ] Handling metadata associated with the key (ex: which dApps they have installed, private state for those dApps, etc.)
+- [ ] Associating data in a smart contract OCI registry with DIDs
 
 ### Misc
 - [ ] Kubernetes ideas for local registry
