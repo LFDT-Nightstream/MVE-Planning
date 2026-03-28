@@ -36,4 +36,5 @@ in practice though, zkLogin doesn't explicitly monitor after of these expiration
 **Requirements in the stack**:
 - RSA verification in Nightstream
 - Sha256 in Nightstream
+- Groth16 verifier in Nightstream
 - User needs to backup their salt, so this depends on the same "restore dApp-specific secret data" open problem we have (for the same reason - storing blinding factors)
