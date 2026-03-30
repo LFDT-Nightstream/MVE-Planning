@@ -87,12 +87,53 @@ Custom transaction format with:
 - Fee payer signature (sponsored transactions, magic byte 0x78)
 - Key authorization field for delegated permissions
 
+### Access Key Storage
+
+Access keys are **software-backed** private keys (P-256 or secp256k1) — unlike the passkey root key which is hardware-backed and non-extractable. They need to be stored somewhere:
+
+**Wallet (wallet.tempo.xyz):**
+- `KeyManager.localStorage()` — stores access key private keys in browser localStorage. Simple but **not recommended for production**: keys are lost if the user clears browser data or switches devices, with no recovery mechanism.
+- `KeyManager.http()` — remote key management. Removes dependency on local browser storage, better for cross-device scenarios. This is the recommended production approach.
+
+**CLI Wallet (`tempoxyz/wallet` — Rust):**
+
+The wallet is a separate Rust binary installed as an extension to the Tempo node via `tempo add wallet`. It lives in its own repo ([tempoxyz/wallet](https://github.com/tempoxyz/wallet)).
+
+Keys are stored in a **`keys.toml`** file at `$TEMPO_HOME/wallet/keys.toml` (defaults to `~/.tempo/wallet/keys.toml`). The file is written with `0o600` permissions (owner-only read/write) via atomic rename. Each key entry in `keys.toml` contains:
+
+```toml
+[[keys]]
+wallet_type = "passkey"        # or "local" (self-custodial EOA)
+wallet_address = "0x..."       # the on-chain account address
+chain_id = 4217
+key_type = "p256"              # or "secp256k1" or "webauthn"
+key_address = "0x..."          # public address derived from the access key
+key = "0x..."                  # the access key private key (inline, plaintext)
+key_authorization = "0x..."    # RLP-encoded SignedKeyAuthorization hex
+expiry = 1700000000            # unix timestamp
+
+[[keys.limits]]
+currency = "0x..."             # token contract address
+limit = "1000"                 # spending limit
+```
+
+Key details from the source code (`tempoxyz/wallet/crates/tempo-common/src/keys/`):
+- **`WalletType`**: `Local` (self-custodial EOA in OS keychain) or `Passkey` (browser auth)
+- **`KeyType`**: `Secp256k1`, `P256`, or `WebAuthn`
+- Private keys are wrapped in `Zeroizing<String>` (scrubbed from memory on drop) but stored **in plaintext** on disk
+- The keystore supports ephemeral keys via `--private-key` flag (never written to disk)
+- Key selection priority: passkey entries > first entry with a key > first entry
+- Authentication flow: user runs `tempo wallet login` → authenticates with passkey → passkey authorizes a CLI-specific access key → access key + authorization stored in `keys.toml` → subsequent operations sign with the access key
+
+**Key distinction:** The passkey root key is non-extractable and hardware-backed (Secure Enclave, Android Keystore). Access keys are regular extractable private keys stored in software. This is a deliberate tradeoff — access keys are scoped and expendable (expiry, spending limits), so the risk of exposure is bounded.
+
 ### Passkey Recovery
 
-If you lose access to your passkey:
-- Passkeys sync via OS keychain (iCloud Keychain, Google Password Manager) or password managers (1Password)
-- Access keys on other devices can still sign transactions
-- Can add Ledger, YubiKey, or other keystores as backup/2FA
+If you lose access to your passkey (root key):
+- Passkeys sync via OS keychain (iCloud Keychain, Google Password Manager) or password managers (1Password) — so if you're logged into iCloud on another device, your passkey is already there
+- Access keys on other devices can still sign transactions (within their authorized scope)
+- Can add Ledger, YubiKey, or other keystores as additional access keys for backup/2FA
+- If you truly lose all access to both the passkey and all access keys, funds are unrecoverable (same as losing a seed phrase)
 
 ## Package Ecosystem Map
 
