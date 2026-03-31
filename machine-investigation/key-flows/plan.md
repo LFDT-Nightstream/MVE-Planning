@@ -8,8 +8,6 @@ Midnight's architecture (BLS12-381/Jubjub curves, Compact circuits, witness-base
 
 ## Approach
 
-Create `/home/hoskinson/MVE-Planning/docs/secure-onboarding-design.md` and update `README.md`.
-
 ### Document Structure
 
 1. **Executive Summary** — QR scan → seed in TEE → three-layer wallet → identity credentials → full access in under 60 seconds (excluding proof generation)
@@ -218,24 +216,18 @@ Create `/home/hoskinson/MVE-Planning/docs/secure-onboarding-design.md` and updat
 
 ### Critical Files
 
-- **Create**: `/home/hoskinson/MVE-Planning/docs/secure-onboarding-design.md`
-- **Update**: `/home/hoskinson/MVE-Planning/README.md`
-- **Reference**: `/home/hoskinson/MVE-Planning/compact-reference.md` (Compact language spec)
-- **Reference**: `/home/hoskinson/MVE-Planning/developer-guide.md` (SDK, circuits, attestation trees)
-- **Reference**: `/home/hoskinson/MVE-Planning/wallet-reference.md` (three-layer wallet, HD derivation)
-- **Reference**: `/home/hoskinson/MVE-Planning/sdk-reference.md` (transaction pipeline, providers)
-- **Reference**: `/home/hoskinson/MVE-Planning/zkir-reference.md` (circuit constraints, BLS12-381 field)
-- **Reference**: `/home/hoskinson/MVE-Planning/zkme.pdf` (zkKYC whitepaper)
-- **Reference**: `/home/hoskinson/MVE-Planning/human-investigation/tempo-passkeys.md`
-- **Reference**: `/home/hoskinson/MVE-Planning/human-investigation/zkLogin.md`
+- **Create**: [Onboarding design](./machine-investigation/key-flows/secure-onboarding-design.md)
+- **Update**: [Key flows](./flows.md)
+- **Reference**: [Midnight reference](`../machine-investigation/midnight-v1-documentation`)
+- **Reference**: [zkME](../references/zkme.pdf) (zkKYC whitepaper)
 
 ## PM Artifacts
 
 Three product management artifacts ground the technical design in user-centered thinking:
 
-- **Problem Framing Canvas** (`docs/problem-framing-canvas.md`) — MITRE canvas identifying biases (QR accessibility, self-custody assumption, smartphone/ID requirement), left-out populations, and a "How Might We" question targeting <60s, <3 decisions onboarding
-- **Proto-Personas** (`docs/proto-personas.md`) — Newcomer Nadia (Nairobi, M-Pesa native), Developer Dev (Berlin, DeFi builder), Enterprise Ethan (Frankfurt, MiCA compliance)
-- **Problem Statements** (`docs/problem-statements.md`) — Per-persona framing narratives with barrier-to-design-section mapping table; identifies 3 critical gaps: SDK onboarding wrapper, lawful access mechanism, credential lifecycle management
+- **Problem Framing Canvas** (`machine-investigation/personas/problem-framing-canvas.md`) — MITRE canvas identifying biases (QR accessibility, self-custody assumption, smartphone/ID requirement), left-out populations, and a "How Might We" question targeting <60s, <3 decisions onboarding
+- **Proto-Personas** (`machine-investigation/personas/proto-personas.md`) — Newcomer Nadia (Nairobi, M-Pesa native), Developer Dev (Berlin, DeFi builder), Enterprise Ethan (Frankfurt, MiCA compliance)
+- **Problem Statements** (`machine-investigation/personas/problem-statements.md`) — Per-persona framing narratives with barrier-to-design-section mapping table; identifies 3 critical gaps: SDK onboarding wrapper, lawful access mechanism, credential lifecycle management
 
 ### Known Gaps (from PM analysis)
 - Design has no alternative onboarding entry point for users who can't scan QR codes (NFC, deep link)
