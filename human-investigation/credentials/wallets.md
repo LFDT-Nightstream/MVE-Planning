@@ -2,29 +2,60 @@
 
 ## Common terms
 
-Many historical proposals for identity leverage [Decentralized Identifiers](https://www.w3.org/TR/did-1.1/) (DIDs) as they allow "self-sovereign" identity (meaning users control their own identity) which is appealing in a blockchain context.
+Many historical proposals for identity leverage [Decentralized Identifiers](https://www.w3.org/TR/did-1.1/) (DIDs) as they allow "self-sovereign" identity (meaning users control their own identity) which is appealing in a blockchain context. However, there are many credentials that are not generated from DIDs - especially in controlled environments.
 
 Typically the flow for these systems is that
 1. An entity (using a key of some kind) issues a "verifiable certificate" (VC) to an identity (ex: university gives degree to student)
 2. The identity can issue a "verifiable presentation" (VP) to an interested party (ex: prove they graduated by presenting their degree)
 
 The ecosystem is converging around three formats for credentials:
-- mDocs (Mobile Documents), and the driver's license specific variation (mDL) as defined in [ISO 18013-5](https://www.iso.org/standard/91081.html). mDocs are a general CBOR scheme (mDL being instantiated with specific well-defined fields), and is mostly adopted by governments (adoption elsewhere stems from the fact that it's easier to adapt to standards governments have picked than getting governments to change their standards). Unfortunately mDocs, mDL, and related specifications are all paywalled and copyrighted (but open source implementations are allowed).
-- [SD-JWT VC draft](https://datatracker.ietf.org/doc/draft-ietf-oauth-sd-jwt-vc/) is a [JWT](https://www.rfc-editor.org/rfc/rfc7519) based VC which takes SD-JWT (Selective disclosure for JSON Web Tokens) as defined in [RFC 9901](https://datatracker.ietf.org/doc/rfc9901/) for enabling selective disclosure. It has a lotof traction by leveraging the existing popular JWT ecosystem in authentication systems.
-- VCDM (Verifiable Credentials Data Model) v2.0 as define by [W3C](https://www.w3.org/TR/vc-data-model-2.0/). It leverages [JSON-LD](https://json-ld.org/spec/) to try and build a significantly more flexible format:
+- mDocs (Mobile Documents) for identity credentials. It expands the in-use [ISO 18013-5](https://www.iso.org/standard/91081.html) which defined mobile driver's license (mDL) credentials, with a new [ISO 23220](https://www.iso.org/standard/74910.html) to generalize to more types of identities. Notably, with the [ISO 13013-7](https://www.iso.org/standard/91154.html) extension to allow them to be used for online verification (machine <-> machine, instead of something like passport shown to human). mDocs are a general CBOR scheme that have a namespace field to define how the CBOR should be interpreted. For example, mDL (mDocs for driver's licenses) is an mDoc with a specific namespace being used which defines the fields typically needed in a driver's licenses. It is mostly adopted by governments (adoption elsewhere stems from the fact that it's easier to adapt to standards governments have picked than getting governments to change their standards). Unfortunately mDocs, mDL, and related specifications are all paywalled and copyrighted (but open source implementations are allowed). That includes the definitions of multiple namespaces, and how they work.
+- [SD-JWT VC draft](https://datatracker.ietf.org/doc/draft-ietf-oauth-sd-jwt-vc/) is a [JWT](https://www.rfc-editor.org/rfc/rfc7519) based VC which takes SD-JWT (Selective disclosure for JSON Web Tokens) as defined in [RFC 9901](https://datatracker.ietf.org/doc/rfc9901/) for enabling selective disclosure. It has a lot of traction by leveraging the existing popular JWT ecosystem in authentication systems.
+- VCDM (Verifiable Credentials Data Model) v2.0 as define by [W3C](https://www.w3.org/TR/vc-data-model-2.0/). Sometimes also called "W3C Verifiable Credential"s. It leverages [JSON-LD](https://json-ld.org/spec/) to try and build a significantly more flexible format:
     - JSON-LD allows linking in definitions of use-case specific standards (instead of depending on centralized registries of handling different use-cases like mDocs)
     - allows specifying which securing mechanism you use, ex: `application/vc+sd-jwt`
     - generally tries to be a superset of other standards, and thus supports SD-JWT VC → VCDM, as well as mDoc → VCDM. Inverse directly is sometimes supported
 
+As far as DID compatibility:
+- VCDM: built with DID compatibility in mind, and supports the flexibility in linking data needed to resolve chains of documents (often required for DID schemes)
+- SD-JWT VC: supports specifying DIDs as fields, but defines no particular semantics to work with them (if you build a tool that supports SD-JWT VCs with DIDs as fields, *you* as the developer need to handle resolving those DIDs and the logic that comes with that)
+- mDocs: no "native" support for DIDs. You *can* have different mDoc namespaces that define DID concepts, but it's not inherit to the specification
+
 These three credential formats are all compatible with OpenID initiatives to built protocols for handling these credentials as an extensions of OAuth 2.0
-- [OpenID4VCI](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html) defines credential *issuance* (not the credentials themselves, which have to be encoded as one of the options like SD-JWT).
-- [OpenID4VP](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) defines *verifiable presentations*
+- [OpenID4VCI](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html) defines the protocol for triggering credential *issuance* (not the credentials themselves, which have to be encoded as one of the options like SD-JWT).
+- [OpenID4VP](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) defines the protocol for requesting *verifiable presentations* (doesn't define the presentation itself)
 
 To facilitate storing and querying credentials, browsers have implemented have implemented
 - a `navigator.credentials.*` module as part of the [Credential Management Level 1](https://www.w3.org/TR/credential-management-1/) which defines how passkeys are queried by the browser
-- a [Digital Credentials API](https://www.w3.org/TR/digital-credentials/) that extends the `navigator.credentials.*` module to also be able to store/query verifiable credentials
+- a [Digital Credentials API](https://www.w3.org/TR/digital-credentials/) (DC API) that extends the `navigator.credentials.*` module to also be able to store/query verifiable credentials
 
-Notably, the OpenID protocols can be sent over HTTPS as the transport, but also support sending over the Digital Credentials API instead.
+The Digital Credentials API ends up being the entry point for most applications, as different systems (OS, browser itself, 3rd party apps like 1password) can register themselves to listen for Digital Credentials API requests to handle them (ex: store your credentials in 1password, and have another site request them).  
+
+Notably,
+- the OpenID protocols can be sent over HTTPS as the transport, but also support sending over the Digital Credentials API instead.
+- the mDoc ecosystem defines its own protocol (doesn't *have* to go through OpenID, and can be passed directly into the Digital Credentials API) 
+- the Digital Credentials API could be extended to support more protocols in the future
+
+Note that [DIDComm](https://identity.foundation/didcomm-messaging/spec/), a popular system for communication between DIDs that enables P2P communication (no https intermediate require)
+    - If, in the Digital Credentials API, the applications is asking *directly* (through the browser API) to some system running on the user's device (either the OS itself, the browser, or some registered application like 1password) to provide certain credentials to it, why are concepts from OpenID (a protocol optimized for HTTPS communication) leveraged instead of a P2P protocol like DIDComm?
+        - DIDComm enables long-running communication sessions, which the Digital Credentials API does not need
+        - DIDComm requires both parties in the communication to have DIDs, but in the Digital Credentials API the requesting party (the app asking for the user's credential) usually doesn't have a DID
+        - DIDComm is DID-centric, but the Digital Credentials API aims to support any time of Verifiable Credential (not just ones related to DIDs)
+        - DIDComm requests are meant to be encrypted (to avoid man-in-the-middle), but the Digital Credentials API needs requests to potentially be visible by multiple parts of the stack (the browser, the OS, identity management apps) to know who can/will handle this request.
+
+Note: these credentials have support for different ways to achieve common cryptographic goals:
+1. Selective disclosure (ex: prove >18 without revealing anything else about the ID)
+2. Unlinkable disclosure (ex: two >18 businesses cannot share proofs they've received to find users who are using both)
+
+There have been a few efforts to providing these cryptographic properties:
+- Google's [Longfellow ZK](https://github.com/google/longfellow-zk) which provides selective disclosure and unlinkability to mDLs specifically (although aspires to do more)
+- [SD-JWT]([RFC 9901](https://datatracker.ietf.org/doc/rfc9901/)) which can be used both with SD-JWT VCs, as well as VCDM
+- [CL signature scheme](https://eprint.iacr.org/2001/019.pdf): old (2001), RSA based, never approved by NIST, and not supported by secure enclaves
+- TODO: add remaining here
+
+Note: [AnonCred](https://www.lfdecentralizedtrust.org/projects/anoncreds) is not on the list, as AnonCred is a combination of things, not a specific scheme
+- AnonCred v1 used CL signatures (combined with its own custom credential format)
+- AnonCred v2 is still in development, and exact scheme used is still being iterated on with ideas around BBS+ (along with which credential format to use, but ideas around VCDM)
 
 ## EU
 
