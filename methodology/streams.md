@@ -26,6 +26,7 @@ We have the following investigations:
 - [~] Tempo account abstraction [investigation](./human-investigation/tempo-passkeys.md)
 - [ ] Worldcoin
 - [x] zkLogin [investigation](./human-investigation/zkLogin.md)
+- [ ] SyRA OAuth login [paper](https://eprint.iacr.org/2024/379), [code](https://github.com/docknetwork/crypto/tree/main/syra)
 - [ ] Aptos Keyless
 - [ ] Lace SDK
 - [ ] MoonPay [OpenWallet Standard](https://openwallet.sh/)(OWS)
@@ -36,7 +37,7 @@ We have the following investigations:
 ### Identity
 - [ ] did:web with zkTLS
 - [ ] Blindfold for ID vs Ligero
-- [ ] Add credential to Apple Wallet feasibility
+- [x] Add credential to Apple Wallet feasibility
 - [ ] [zkMe](https://docs.zk.me/hub) (and other groth16 approaches?)
 - [ ] Handling metadata associated with the key (ex: which dApps they have installed, private state for those dApps, etc.)
 - [ ] Associating data in a smart contract OCI registry with DIDs
@@ -47,3 +48,15 @@ We have the following investigations:
 - [ ] Kubernetes ideas for local registry
 - [ ] TEEs
 - [ ] Midnight Platform
+
+### Research
+- [ ] Lattice-friendly DA
+- [ ] Lattice-friendly address scheme
+- [ ] Lattice-friendly MPC
+- [ ] Lattice-friendly PCS
+- [ ] Lattice-friendly Dory
+- [ ] Lattice-friendly anonymous credentials
+- [ ] Folding-friendly Twist & Shout
+- [ ] Blindfold for Neo
+- [ ] Tensor generalization of lattices (esp. in the context of hardware acceleration)
+- [ ] Settle Nightstream via KZG
