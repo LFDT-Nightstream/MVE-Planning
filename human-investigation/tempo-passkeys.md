@@ -21,6 +21,7 @@ address = last_20_bytes(keccak256(abi.encode(pubkey.x, pubkey.y)))
 Where `x` and `y` are the 32-byte coordinates of the P-256 public key.
 
 Midnight would need to either:
+
 - Support this address format natively (alongside any existing format), or
 - Provide a mapping/translation layer
 
@@ -30,24 +31,24 @@ WebAuthn passkeys produce **P-256 (secp256r1)** signatures — this is hardcoded
 
 Tempo supports three signature types at the protocol level:
 
-| Key Type | ID | Curve | Use Case |
-|---|---|---|---|
-| secp256k1 ECDSA | 0 | secp256k1 | Traditional EVM wallets |
-| P-256 ECDSA | 1 | secp256r1 | Secure enclave / WebCrypto keys |
-| WebAuthn | 2 | secp256r1 | Passkeys (with origin binding + user presence) |
+| Key Type        | ID  | Curve     | Use Case                                       |
+| --------------- | --- | --------- | ---------------------------------------------- |
+| secp256k1 ECDSA | 0   | secp256k1 | Traditional EVM wallets                        |
+| P-256 ECDSA     | 1   | secp256r1 | Secure enclave / WebCrypto keys                |
+| WebAuthn        | 2   | secp256r1 | Passkeys (with origin binding + user presence) |
 
 Midnight would need P-256 signature verification in its consensus/validation layer.
 
 ## P-256 vs secp256k1
 
-| Aspect | P-256 (secp256r1) | secp256k1 |
-|---|---|---|
-| Origin | NIST standard | Koblitz curve (Bitcoin/Ethereum) |
-| Hardware support | Native on all modern devices | Not natively supported |
-| Standards | WebCrypto, TLS, FIDO2, PKI | Bitcoin, Ethereum |
-| Security level | ~128 bits | ~128 bits |
-| Performance | Slower (more field operations) | Faster (special structure) |
-| WebAuthn compatible | Yes | No |
+| Aspect              | P-256 (secp256r1)              | secp256k1                        |
+| ------------------- | ------------------------------ | -------------------------------- |
+| Origin              | NIST standard                  | Koblitz curve (Bitcoin/Ethereum) |
+| Hardware support    | Native on all modern devices   | Not natively supported           |
+| Standards           | WebCrypto, TLS, FIDO2, PKI     | Bitcoin, Ethereum                |
+| Security level      | ~128 bits                      | ~128 bits                        |
+| Performance         | Slower (more field operations) | Faster (special structure)       |
+| WebAuthn compatible | Yes                            | No                               |
 
 The fundamental incompatibility: hardware-backed passkeys produce P-256 signatures, but traditional blockchains verify secp256k1. This is the core gap Tempo solves by supporting both natively.
 
@@ -68,18 +69,21 @@ This is analogous to SSH `authorized_keys` or OAuth refresh tokens across device
 ### Cross-App / Cross-Device Usage
 
 Tempo uses **cross-origin iframe embedding** for SSO-like wallet experience:
+
 - Third-party apps embed a thin iframe from `wallet.tempo.xyz`
 - The iframe has `allow="publickey-credentials-create; publickey-credentials-get"` permission policy
 - Passkey ceremony runs inside the iframe, bound to the `tempo.xyz` RP ID
 - Communication via `postMessage`
 
 Security hardening:
+
 - **Access Keys**: The embedded experience authorizes a scoped Access Key for the third-party app (not the root signer)
 - **IntersectionObserverV2**: Detects clickjacking attempts — if iframe is obscured, pops out to standalone window
 
 ### Tempo Transactions (EIP-2718 type 0x76)
 
 Custom transaction format with:
+
 - Batched calls (atomic multi-call execution)
 - **2D nonces** (nonce_key + nonce) — enables parallel transaction streams from a single account
 - `valid_before` / `valid_after` timestamps
@@ -92,6 +96,7 @@ Custom transaction format with:
 Access keys are **software-backed** private keys (P-256 or secp256k1) — unlike the passkey root key which is hardware-backed and non-extractable. They need to be stored somewhere:
 
 **Wallet (wallet.tempo.xyz):**
+
 - `KeyManager.localStorage()` — stores access key private keys in browser localStorage. Simple but **not recommended for production**: keys are lost if the user clears browser data or switches devices, with no recovery mechanism.
 - `KeyManager.http()` — remote key management. Removes dependency on local browser storage, better for cross-device scenarios. This is the recommended production approach.
 
@@ -118,6 +123,7 @@ limit = "1000"                 # spending limit
 ```
 
 Key details from the source code (`tempoxyz/wallet/crates/tempo-common/src/keys/`):
+
 - **`WalletType`**: `Local` (self-custodial EOA in OS keychain) or `Passkey` (browser auth)
 - **`KeyType`**: `Secp256k1`, `P256`, or `WebAuthn`
 - Private keys are wrapped in `Zeroizing<String>` (scrubbed from memory on drop) but stored **in plaintext** on disk
@@ -130,6 +136,7 @@ Key details from the source code (`tempoxyz/wallet/crates/tempo-common/src/keys/
 ### Passkey Recovery
 
 If you lose access to your passkey (root key):
+
 - Passkeys sync via OS keychain (iCloud Keychain, Google Password Manager) or password managers (1Password) — so if you're logged into iCloud on another device, your passkey is already there
 - Access keys on other devices can still sign transactions (within their authorized scope)
 - Can add Ledger, YubiKey, or other keystores as additional access keys for backup/2FA
@@ -139,30 +146,30 @@ If you lose access to your passkey (root key):
 
 ### Chain-Agnostic (reusable regardless of chain)
 
-| Package | npm | Description | Stack Layer |
-|---|---|---|---|
-| **webauthx** | `webauthx` | Minimal WebAuthn toolkit for passkey registration & authentication. 3 functions for the auth ceremony across server and client. Sets conventional defaults for broad browser/authenticator compatibility. | Client + Server |
-| **Viem** | `viem` | TypeScript Ethereum client library. Abstractions over JSON-RPC. First-class smart contract APIs, ABI encoding/decoding, wallet integration. | Core client library |
-| **Wagmi** | `@wagmi/core`, `@wagmi/react`, `@wagmi/vue` | Reactive primitives for Ethereum apps. Framework-agnostic with React/Vue/Solid bindings. Porto is available as a wagmi connector. | App framework |
-| **ox** | `ox` | Low-level, stateless Ethereum TypeScript primitives. Standard library for ABI, address, ECDSA, hex, RLP, transactions. Includes `WebAuthnP256` module (successor to archived `webauthn-p256`). | Foundational utilities |
-| **ABIType** | `abitype` | Strict TypeScript types for Ethereum ABIs. Type-safe ABI handling without codegen. | Dev tooling / types |
+| Package      | npm                                         | Description                                                                                                                                                                                               | Stack Layer            |
+| ------------ | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| **webauthx** | `webauthx`                                  | Minimal WebAuthn toolkit for passkey registration & authentication. 3 functions for the auth ceremony across server and client. Sets conventional defaults for broad browser/authenticator compatibility. | Client + Server        |
+| **Viem**     | `viem`                                      | TypeScript Ethereum client library. Abstractions over JSON-RPC. First-class smart contract APIs, ABI encoding/decoding, wallet integration.                                                               | Core client library    |
+| **Wagmi**    | `@wagmi/core`, `@wagmi/react`, `@wagmi/vue` | Reactive primitives for Ethereum apps. Framework-agnostic with React/Vue/Solid bindings. Porto is available as a wagmi connector.                                                                         | App framework          |
+| **ox**       | `ox`                                        | Low-level, stateless Ethereum TypeScript primitives. Standard library for ABI, address, ECDSA, hex, RLP, transactions. Includes `WebAuthnP256` module (successor to archived `webauthn-p256`).            | Foundational utilities |
+| **ABIType**  | `abitype`                                   | Strict TypeScript types for Ethereum ABIs. Type-safe ABI handling without codegen.                                                                                                                        | Dev tooling / types    |
 
 ### Tempo/Ithaca-Specific
 
-| Package | npm | Description | Stack Layer |
-|---|---|---|---|
-| **Porto SDK** | `porto` | TypeScript SDK for creating, managing, and interacting with passkey-powered accounts. Integrates with Wagmi as a connector. Also supports direct Viem usage via `Porto.create()`. Works with wallet libraries (Privy, ConnectKit, RainbowKit, Dynamic, etc.). | Client SDK |
-| **Porto Account Contracts** | `@ithaca/account` | EIP-7702 smart contract implementation. WebAuthn/passkey auth, batch transactions, gas sponsorship, access control, session keys, multi-sig. | On-chain (Solidity) |
-| **Relay** | (infrastructure) | Cross-chain transaction routing for EIP-7702 accounts. Requires RIP-7212 (secp256r1 precompile) and `eth_simulateV1`. | Infrastructure |
-| **reth-p256** | (Rust crate) | P-256 elliptic curve support for the Reth Ethereum client. Implements the RIP-7212 precompile. | Node infrastructure |
+| Package                     | npm               | Description                                                                                                                                                                                                                                                   | Stack Layer         |
+| --------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| **Porto SDK**               | `porto`           | TypeScript SDK for creating, managing, and interacting with passkey-powered accounts. Integrates with Wagmi as a connector. Also supports direct Viem usage via `Porto.create()`. Works with wallet libraries (Privy, ConnectKit, RainbowKit, Dynamic, etc.). | Client SDK          |
+| **Porto Account Contracts** | `@ithaca/account` | EIP-7702 smart contract implementation. WebAuthn/passkey auth, batch transactions, gas sponsorship, access control, session keys, multi-sig.                                                                                                                  | On-chain (Solidity) |
+| **Relay**                   | (infrastructure)  | Cross-chain transaction routing for EIP-7702 accounts. Requires RIP-7212 (secp256r1 precompile) and `eth_simulateV1`.                                                                                                                                         | Infrastructure      |
+| **reth-p256**               | (Rust crate)      | P-256 elliptic curve support for the Reth Ethereum client. Implements the RIP-7212 precompile.                                                                                                                                                                | Node infrastructure |
 
 ### Related / Reference
 
-| Package | Source | Description | Stack Layer |
-|---|---|---|---|
-| **webauthn-p256** | `webauthn-p256` (archived) | P-256 WebAuthn utilities. Migrated into ox library's `WebAuthnP256` module. | Client (deprecated) |
-| **Daimo p256-verifier** | `github.com/daimo-eth/p256-verifier` | Only audited open-source Solidity P-256 signature verifier. Deterministic CREATE2 deployment across EVM chains. | On-chain reference |
-| **p256 (Rust)** | `p256` crate | Pure Rust P-256 implementation with ECDSA + ECDH support. Part of RustCrypto. | Rust crypto library |
+| Package                 | Source                               | Description                                                                                                     | Stack Layer         |
+| ----------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------- | ------------------- |
+| **webauthn-p256**       | `webauthn-p256` (archived)           | P-256 WebAuthn utilities. Migrated into ox library's `WebAuthnP256` module.                                     | Client (deprecated) |
+| **Daimo p256-verifier** | `github.com/daimo-eth/p256-verifier` | Only audited open-source Solidity P-256 signature verifier. Deterministic CREATE2 deployment across EVM chains. | On-chain reference  |
+| **p256 (Rust)**         | `p256` crate                         | Pure Rust P-256 implementation with ECDSA + ECDH support. Part of RustCrypto.                                   | Rust crypto library |
 
 ## What Midnight Needs
 
@@ -193,6 +200,7 @@ For Midnight to adopt passkey-based accounts similar to Tempo:
 The WebAuthn **PRF (Pseudo-Random Function) extension** allows each passkey to derive unique encryption keys per site/application. The authenticator evaluates a PRF using a device-stored secret key + relying party input, producing a deterministic 32-byte value.
 
 Use cases for Midnight:
+
 - **Per-dApp session key derivation** — hardware-backed, no seed phrase
 - **End-to-end encrypted private state** — derive encryption keys for dApp-specific data
 - **Account recovery** — deterministic key derivation from passkey

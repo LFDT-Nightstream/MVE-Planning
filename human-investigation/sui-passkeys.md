@@ -16,6 +16,7 @@ This forced a new signature scheme (`0x06`) with validators that understand the 
 ## Verification (on-chain)
 
 Validators do 6 steps:
+
 1. Deserialize signature with flag `0x06`
 2. Validate `clientDataJSON` has required WebAuthn fields (`type: "webauthn.get"`, `challenge`, `origin`, `crossOrigin`)
 3. Verify the `challenge` field matches `intent || blake2b_hash(tx_data)`
@@ -38,14 +39,14 @@ address = blake2b_hash(0x06 || compressed_p256_public_key)
 
 ## Comparison to Tempo / Our Demo
 
-| Aspect | Sui | Tempo | Our Demo |
-|---|---|---|---|
-| Curve | P-256 (secp256r1) | P-256 (secp256r1) | P-256 (secp256r1) |
-| WebAuthn | Yes | Yes | Yes |
-| Address derivation | blake2b(0x06 \|\| pk) | keccak256(x \|\| y) | did:key (multicodec + base58) |
-| Signature scheme | Custom flag 0x06 wrapping WebAuthn | Native protocol support (key_type 2) | Standard ECDSA via Web Crypto |
-| Access keys | No (single passkey per account) | Yes (root key + access keys) | Yes (passkey + software access key) |
-| Cross-app via iframe | No | Yes (wallet.tempo.xyz embed) | Yes (passkeys.rvcas.dev/embed) |
+| Aspect               | Sui                                | Tempo                                | Our Demo                            |
+| -------------------- | ---------------------------------- | ------------------------------------ | ----------------------------------- |
+| Curve                | P-256 (secp256r1)                  | P-256 (secp256r1)                    | P-256 (secp256r1)                   |
+| WebAuthn             | Yes                                | Yes                                  | Yes                                 |
+| Address derivation   | blake2b(0x06 \|\| pk)              | keccak256(x \|\| y)                  | did:key (multicodec + base58)       |
+| Signature scheme     | Custom flag 0x06 wrapping WebAuthn | Native protocol support (key_type 2) | Standard ECDSA via Web Crypto       |
+| Access keys          | No (single passkey per account)    | Yes (root key + access keys)         | Yes (passkey + software access key) |
+| Cross-app via iframe | No                                 | Yes (wallet.tempo.xyz embed)         | Yes (passkeys.rvcas.dev/embed)      |
 
 ## Key Takeaway
 
