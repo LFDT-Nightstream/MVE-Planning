@@ -26,7 +26,7 @@ We have the following investigations:
 - [~] Tempo account abstraction [investigation](./human-investigation/tempo-passkeys.md)
 - [ ] Worldcoin
 - [x] zkLogin [investigation](./human-investigation/zkLogin.md)
-- [ ] SyRA OAuth login [paper](https://eprint.iacr.org/2024/379), [code](https://github.com/docknetwork/crypto/tree/main/syra)
+- [x] SyRA OAuth login [investigation](./human-investigation/SyRA.md)
 - [ ] Aptos Keyless
 - [ ] Lace SDK
 - [ ] MoonPay [OpenWallet Standard](https://openwallet.sh/)(OWS)
