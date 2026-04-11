@@ -8,6 +8,8 @@ Typically the flow for these systems is that
 1. An entity (using a key of some kind) issues a "verifiable certificate" (VC) to an identity (ex: university gives degree to student)
 2. The identity can issue a "verifiable presentation" (VP) to an interested party (ex: prove they graduated by presenting their degree)
 
+### Credential types
+
 The ecosystem is converging around three formats for credentials:
 - mDocs (Mobile Documents) for identity credentials. It expands the in-use [ISO 18013-5](https://www.iso.org/standard/91081.html) which defined mobile driver's license (mDL) credentials, with a new [ISO 23220](https://www.iso.org/standard/74910.html) to generalize to more types of identities. Notably, with the [ISO 13013-7](https://www.iso.org/standard/91154.html) extension to allow them to be used for online verification (machine <-> machine, instead of something like passport shown to human). mDocs are a general CBOR scheme that have a namespace field to define how the CBOR should be interpreted. For example, mDL (mDocs for driver's licenses) is an mDoc with a specific namespace being used which defines the fields typically needed in a driver's licenses. It is mostly adopted by governments (adoption elsewhere stems from the fact that it's easier to adapt to standards governments have picked than getting governments to change their standards). Unfortunately mDocs, mDL, and related specifications are all paywalled and copyrighted (but open source implementations are allowed). That includes the definitions of multiple namespaces, and how they work.
 - [SD-JWT VC draft](https://datatracker.ietf.org/doc/draft-ietf-oauth-sd-jwt-vc/) is a [JWT](https://www.rfc-editor.org/rfc/rfc7519) based VC which takes SD-JWT (Selective disclosure for JSON Web Tokens) as defined in [RFC 9901](https://datatracker.ietf.org/doc/rfc9901/) for enabling selective disclosure. It has a lot of traction by leveraging the existing popular JWT ecosystem in authentication systems.
@@ -21,6 +23,8 @@ As far as DID compatibility:
 - SD-JWT VC: supports specifying DIDs as fields, but defines no particular semantics to work with them (if you build a tool that supports SD-JWT VCs with DIDs as fields, *you* as the developer need to handle resolving those DIDs and the logic that comes with that)
 - mDocs: no "native" support for DIDs. You *can* have different mDoc namespaces that define DID concepts, but it's not inherit to the specification
 
+### Protocols
+
 These three credential formats are all compatible with OpenID initiatives to built protocols for handling these credentials as an extensions of OAuth 2.0
 - [OpenID4VCI](https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html) defines the protocol for triggering credential *issuance* (not the credentials themselves, which have to be encoded as one of the options like SD-JWT).
 - [OpenID4VP](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) defines the protocol for requesting *verifiable presentations* (doesn't define the presentation itself)
@@ -28,6 +32,7 @@ These three credential formats are all compatible with OpenID initiatives to bui
 To facilitate storing and querying credentials, browsers have implemented have implemented
 - a `navigator.credentials.*` module as part of the [Credential Management Level 1](https://www.w3.org/TR/credential-management-1/) which defines how passkeys are queried by the browser
 - a [Digital Credentials API](https://www.w3.org/TR/digital-credentials/) (DC API) that extends the `navigator.credentials.*` module to also be able to store/query verifiable credentials
+<!-- note: the Digital Credentials API replaces the older CHAPI API (which was not a true browser API, but meant to emulate what a native API would look like through standardized UI flow to motivate it a browser-native api like the DC API) -->
 
 The Digital Credentials API ends up being the entry point for most applications, as different systems (OS, browser itself, 3rd party apps like 1password) can register themselves to listen for Digital Credentials API requests to handle them (ex: store your credentials in 1password, and have another site request them).  
 
@@ -43,19 +48,70 @@ Note that [DIDComm](https://identity.foundation/didcomm-messaging/spec/), a popu
         - DIDComm is DID-centric, but the Digital Credentials API aims to support any time of Verifiable Credential (not just ones related to DIDs)
         - DIDComm requests are meant to be encrypted (to avoid man-in-the-middle), but the Digital Credentials API needs requests to potentially be visible by multiple parts of the stack (the browser, the OS, identity management apps) to know who can/will handle this request.
 
+### Cryptography
+
+Different cryptography is used to achieve Anonymous Credentials (AC)
+
 Note: these credentials have support for different ways to achieve common cryptographic goals:
 1. Selective disclosure (ex: prove >18 without revealing anything else about the ID)
-2. Unlinkable disclosure (ex: two >18 businesses cannot share proofs they've received to find users who are using both)
+2. Unlinkable disclosure (presentations cannot be used to leak privacy cross-context)
+    - Presentation Unlinkability: Same Verifier, multiple presentations (ex: can you tell if somebody's been to the same bar and proved >18 multiple times)
+    - Verifier/Verifier Unlinkability: Two different Verifiers cannot determine that they received presentations from the same credential
+    - Issuer/Verifier Unlinkability: Issuers cannot track where you use your ID
+    - Pseudonyms: the ability for users opt-into having linkability
+3. Equality proofs (ex: prove two different IDs have the same value for a "name" field, without revealing the name)
+
+An easy example to see how this kind of property is possible, think of *blind signatures*:
+1. The user prepares a credential request (ex: "age ≥ 18")
+1. They "blind" this request by padding with random bytes (request || nonce)
+1. The issuer (ex: university) signs the blinded data (do not know the request)
+1. The user can "unblind" as they have the original <request, nonce>, and can use the signature as a valid signed credential
 
 There have been a few efforts to providing these cryptographic properties:
-- Google's [Longfellow ZK](https://github.com/google/longfellow-zk) which provides selective disclosure and unlinkability to mDLs specifically (although aspires to do more)
-- [SD-JWT]([RFC 9901](https://datatracker.ietf.org/doc/rfc9901/)) which can be used both with SD-JWT VCs, as well as VCDM
+- Google's [Longfellow ZK](https://github.com/google/longfellow-zk) which bring anonymous credentials to mDLs specifically (although aspires to cover more VC formats)
+    - Supports unlinkability 
+    - Implementation doesn't support equality proofs, but *should* be doable
+- [SD-JWT](https://datatracker.ietf.org/doc/rfc9901/) which can be used both with SD-JWT VCs, as well as VCDM. It *limited* support for unlinkability
+    - Presentation Unlinkability and Verifier/Verifier Unlinkability achieved by creating batches of credentials, like 10 copies of the same driver's license
+    - Issuer/Verifier Unlinkability is not achievable
 - [CL signature scheme](https://eprint.iacr.org/2001/019.pdf): old (2001), RSA based, never approved by NIST, and not supported by secure enclaves
-- TODO: add remaining here
+    - Supports unlinkability
+    - Supports equality proofs
+- [PS signature scheme](https://eprint.iacr.org/2015/525): newer iteration on CL signatures that, with some extra constraints and assumptions, achieve better signature size
+    - Supports unlinkability
+    - Supports equality proofs
+- [BBS+](https://datatracker.ietf.org/doc/draft-irtf-cfrg-bbs-signatures/) is an elliptic-curve ([BLS12-381](https://datatracker.ietf.org/doc/draft-irtf-cfrg-pairing-friendly-curves/)) scheme that is [standardized for use in VCs](https://www.w3.org/TR/vc-di-bbs/). Note: it's based on a series of papers (not just one)
+    - It supports unlinkability through a Schnorr-style proof of knowledge, and not through some complex ZK scheme
+    - It doesn't support equality proofs (not due to a fundamental restriction on the cryptography, but just because the standard). Although it supports aggregating VPs, it only allows disclosing combined <name, value> pairs (cannot prove a "name" field exists, with same value in two different places, without revealing what the "name" is (ex: "Alice"))
 
 Note: [AnonCred](https://www.lfdecentralizedtrust.org/projects/anoncreds) is not on the list, as AnonCred is a combination of things, not a specific scheme
 - AnonCred v1 used CL signatures (combined with its own custom credential format)
-- AnonCred v2 is still in development, and exact scheme used is still being iterated on with ideas around BBS+ (along with which credential format to use, but ideas around VCDM)
+- [AnonCred v2](https://github.com/anoncreds/anoncreds-v2-rs) is still in (slow, very occasional) development, and exact scheme used is still being iterated on, along with which credential format to use
+
+Note: for presentations, sometimes full unlinkability is *too much* privacy, as it allows for sybil attacks (ex: sign up to the same website many times by pretending to be many different people 18+). To tackle this, some schemes (ex: BBS+) allow defining "Pseudonym"s. However, these *require extra support from the issuer* (for the same reason [SyRA](../SyRA.md) also requires extra work from the issuer for sybil-resistant zkLogin). However, may of these schemes require cryptography we don't (yet) easily have in the lattice setting (ex: specific kinds of VRFs in SyRA)
+
+Note: none of these standards are post-quantum. Deciding on a post-quantum scheme is one of the ongoing [work streams](../../methodology/streams.md)
+
+#### Revocations
+
+Some systems require revocation in case credentials are lost / compromised.
+
+Usually this is handled by having the credential owner manage an "accumulator" of revoked IDs, and VPs not need to be verified with two steps:
+1. Verify claim itself (ex: over 18)
+2. Proof credential is not in the revocation list
+
+The technique used is usually a bitstring managed by the issuer that allocates one bit to all issued credentials, with the value representing the revocation status. At one bit per credential, this easily scales to large user sets (1 MB is 8m bits uncompressed. In practice, since most entries are 0, the compression factor is ver big). This means the list can easily be downloaded in its entirety by the user (to avoid leaking which entry belongs to a user).
+
+There are two standards for this:
+- [Token Status List (TSL)](https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list/) for mDocs and SD-JWT VCs
+- [Bitstring Status List v1.0](https://www.w3.org/TR/vc-bitstring-status-list/) for VCDM / JSON-LD
+
+#### Usage of cryptography
+
+While there are many cryptographic schemes (many having seen *some* usage in production), the industry currently primarily leverages
+- Longfellow
+- SD-JWT
+- BBS+
 
 ## EU
 
@@ -88,6 +144,11 @@ That means that, in practice
 For compatibility with standards:
 - The EUID allows implementers to support the Digital Credentials API, and is likely to move fully to it as it gets standardized.
 - The EUID mandates mDocs and SD-JWT VC, and optionally allows VCDM (and for non-qualified EAAs only).
+
+eIDAS specifically requires support for:
+- pseudonyms
+- selective disclosure
+- unlinkability
 
 #### Summary
 

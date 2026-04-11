@@ -6,7 +6,7 @@ associate blockchain-friendly in-memory (ex: ed25519) keypairs to a master socia
 2. Connect your social login to this keypair
 3. Associate state with the social login (i.e. the social login is the master account, and you're just associating a blockchain-friendly keypair to it)
  
-zkLogin allows having many ephemeral keypairs for the same social login
+zkLogin allows having many ephemeral keypairs for the same social login (see [SyRA](./SyRA.md) for a variation that disallows this)
 
 **General architecture of zkLogin:**
 The goal is to cross-sign the ephemeral keypair and the social login (required for both to sign each other to link them)
@@ -36,5 +36,5 @@ in practice though, zkLogin doesn't explicitly monitor after of these expiration
 **Requirements in the stack**:
 - RSA verification in Nightstream
 - Sha256 in Nightstream
-- Groth16 verifier in Nightstream
+- Groth16 verifier in Nightstream (or a post-quantum version of Groth16)
 - User needs to backup their salt, so this depends on the same "restore dApp-specific secret data" open problem we have (for the same reason - storing blinding factors)
