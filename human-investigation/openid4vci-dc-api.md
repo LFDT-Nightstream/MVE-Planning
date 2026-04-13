@@ -191,9 +191,13 @@ If we wanted this to work for midnightOS:
 
 ## Recommendation
 
-**Go with Option B** (indirection via access key). Our demo is already 80% of the way there — we already have the passkey-signs-authorization-of-access-key step. Adding a VC envelope that the access key signs is a small layer on top. The resulting credential is verifiable by any standard W3C VC verifier, with the only extra work being the capability chain check (which is itself a W3C concept).
+Since we control the whole chain (midnightOS + Nightstream verifier), **Option A becomes more attractive**. The main downside of Option A — non-portability of a custom `Es256WebAuthn` proof type — only matters if you care about third-party W3C VC verifiers. For credentials that are consumed by Nightstream circuits or a midnightOS-aware verifier, we can define whatever proof type we want.
 
-Option A is theoretically cleaner (root key = direct issuer) but you're essentially doing the same custom-signature work Sui had to do, without their leverage of controlling the whole chain.
+Sui took this approach successfully: they defined a new signature scheme (flag `0x06`) and updated their validators to understand it. Same playbook works here — we define a cryptosuite like `webauthn-p256-2026` that carries `{authenticatorData, clientDataJSON, signature}` in the proof, and our verifier knows how to unwrap it. The root key is the direct issuer, the delegation model is clean, no indirection needed.
+
+Option B still makes sense if we want the VCs to be portable to existing W3C VC tooling (1Password, Apple Wallet, standard SSI verifiers) — but for first-party consumption, Option A is cleaner.
+
+**Suggested path**: start with Option A for the midnightOS-native case (chain-verified credentials), add Option B later if we need portability to the broader SSI ecosystem.
 
 ## Sources
 
