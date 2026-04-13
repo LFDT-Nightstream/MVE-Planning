@@ -4,7 +4,7 @@
 
 Can we represent an access key (derived from a passkey root key) as a **W3C Verifiable Credential**, issued via **OpenID4VCI** transported over the browser's **Digital Credentials API** (no HTTPS), and stored in an identity wallet for later verification or distribution to employees?
 
-Short answer: **yes**, with one significant gotcha around WebAuthn signing and two realistic ways around it.
+Short answer: **yes**, with one significant gotcha around WebAuthn signing. There are two realistic ways around it, each with different tradeoffs.
 
 ## The Three Moving Parts
 
@@ -66,7 +66,7 @@ The DC API doesn't care about the semantics of the protocol body — it just pas
 
 ## The Flow for Access Key Credentials
 
-Putting it together, the intended flow is:
+Putting it together:
 
 1. User has a root key (passkey in secure enclave) and has generated an access key (software P-256)
 2. Some dApp (or the wallet UI itself) wants a Verifiable Credential for the access key
@@ -89,18 +89,18 @@ authenticatorData || sha256(clientDataJSON)
 
 Where the thing you actually care about signing has to be embedded inside `clientDataJSON.challenge`. The signature carries all this WebAuthn envelope baggage.
 
-Sui hit this exact wall when adding passkey support — they created a dedicated signature scheme (flag `0x06`) specifically to carry the WebAuthn envelope for verification. Standard VC verifiers won't know how to unwrap this.
+Sui hit this exact wall when adding passkey support — they created a dedicated signature scheme (flag `0x06`) specifically to carry the WebAuthn envelope for verification. Standard W3C VC verifiers won't know how to unwrap this.
 
-## Two Realistic Options
+## Two Options
 
-### Option A: Custom Proof Type
+### Option A: Custom WebAuthn Proof Type
 
-Define a proof type like `Es256WebAuthn` that carries `{authenticatorData, clientDataJSON, signature}` in the proof object:
+Define a cryptosuite like `webauthn-p256-2026` and a proof type like `Es256WebAuthn` that carries `{authenticatorData, clientDataJSON, signature}` in the proof object:
 
 ```json
 "proof": {
   "type": "Es256WebAuthn",
-  "cryptosuite": "webauthn-es256-2026",
+  "cryptosuite": "webauthn-p256-2026",
   "verificationMethod": "did:key:<root>#keys-1",
   "proofValue": "<ecdsa-signature-hex>",
   "webauthn": {
@@ -110,20 +110,22 @@ Define a proof type like `Es256WebAuthn` that carries `{authenticatorData, clien
 }
 ```
 
-A verifier reconstructs `authenticatorData || sha256(clientDataJSON)`, verifies the signature, then checks that `clientDataJSON.challenge` matches the canonicalized VC hash.
+A verifier reconstructs `authenticatorData || sha256(clientDataJSON)`, verifies the signature with the root public key, then checks that `clientDataJSON.challenge` matches the canonicalized VC hash.
 
 **Tradeoffs:**
 
 - Pro: single VC, root key is the direct issuer
-- Con: non-portable — existing W3C VC verifiers can't verify it
-- Con: needs standardization work (or you maintain your own cryptosuite spec)
+- Pro: clean delegation model — no indirection through a second key
+- Pro: same pragmatic move Sui made with their `0x06` signature scheme
+- Con: non-portable — existing W3C VC verifiers (1Password, Apple Wallet, generic SSI tooling) can't verify it without support for the custom cryptosuite
+- Con: needs a cryptosuite spec we define and maintain (unless/until one gets standardized upstream)
 
-### Option B: Indirection via Access Key (recommended)
+### Option B: Indirection via Access Key
 
 Don't have the root key sign the VC directly. Instead:
 
 1. The root key (passkey) signs a **key authorization** — WebAuthn signature over a challenge containing the access key's public key. This is exactly what our demo already produces via `/api/authorize-key`.
-2. The access key (software) signs the VC using a standard proof type (JWT-VC or Data Integrity with `Ecdsa256k1` / `EcdsaP256`).
+2. The access key (software) signs the VC using a standard proof type (JWT-VC or Data Integrity with `EcdsaP256`).
 3. The VC includes the key authorization as a `capabilityChain` or embeds a second VC attesting the delegation.
 
 The verifier checks two things:
@@ -135,24 +137,22 @@ The verifier checks two things:
 
 - Pro: the VC itself uses standard proof types → portable, works in existing wallets
 - Pro: maps directly to what we already built in the demo
-- Con: verifiers must understand the capability chain (but this is an existing W3C concept)
-- Con: two-step verification
+- Con: verifiers must still understand the capability chain (a W3C concept, but less widely implemented than basic VC verification)
+- Con: two-step verification, indirect issuer semantics
 
 ## Mapping to Our Existing Demo
 
-Our current passkey demo already has all the pieces:
+Our current passkey demo already has most of the pieces for either option:
 
 - `/api/register/*` — creates the passkey (root key)
 - Access key generated client-side via Web Crypto
 - `/api/authorize-key/*` — passkey signs a challenge containing the access key pubkey, server stores the authorization
 
-To turn this into a VC flow, we'd add:
+For **Option A**, the `/api/authorize-key` endpoint essentially becomes an issuer endpoint. Instead of storing a bare authorization record, it builds a full VC envelope with the access key in `credentialSubject`, sets the challenge to the canonicalized VC hash, and wraps the WebAuthn response as a `webauthn-p256-2026` proof. The access key never signs anything for the VC — the passkey is the direct issuer.
 
-- A route (or local handler) that emits a VC envelope containing the access key
-- The VC's `proof` is either (A) a custom WebAuthn proof or (B) a standard access-key-signed proof with the existing authorization as `capabilityChain`
-- A DC API integration point that accepts an OpenID4VCI request body and returns the VC
+For **Option B**, the existing authorization record is reused as-is (carried in the VC as `capabilityChain`), and the access key gains a new responsibility: signing the VC it's embedded in using a standard proof type.
 
-Nothing new cryptographically — it's a formatting and transport layer on top of what already exists.
+Either way, no new crypto — it's a formatting and transport layer on top of what already exists.
 
 ## OpenID4VCI Over DC API: What Collapses
 
@@ -167,14 +167,21 @@ Realistic subset of OpenID4VCI we'd actually use:
 - NOT Sections 5-6 (Authorization/Token endpoints) — skipped via pre-auth flow
 - Key Attestation (Appendix D) — natural fit, since the secure enclave can attest the passkey's hardware binding
 
-## What Midnight Needs
+## What Midnight Would Need
 
-If we wanted this to work for midnightOS:
+Shared work regardless of option:
 
 - **Access key credential vocabulary** — define a `DerivedKeyCredential` `@context` with `parentKey`, `capabilities`, `spendingLimit`, etc.
-- **Local DC API handler** — a device-side component that handles OpenID4VCI credential requests and produces VCs. In a browser-only world this is a Service Worker or a wallet extension. For midnightOS, a native device component.
-- **VC proof type decision** — pick option A or B above
-- **Verifier support** — any chain / verifier that wants to check these VCs needs the corresponding verification logic. For Midnight, this could be a Nightstream circuit that verifies the VC proof + the capability chain.
+- **Local DC API handler** — a device-side component that accepts OpenID4VCI credential requests and returns a signed VC. In a browser-only world this is a Service Worker or a wallet extension. For midnightOS, a native device component.
+
+Option A additional work:
+
+- **`webauthn-p256-2026` cryptosuite spec** — document canonicalization rules, how the challenge is derived from the VC hash, and how `authenticatorData || sha256(clientDataJSON)` is verified against `proofValue`
+- **Verifier support for the custom cryptosuite** — for Nightstream, a circuit that verifies the WebAuthn envelope and extracts the access key from `credentialSubject`
+
+Option B additional work:
+
+- **`capabilityChain` handling in the verifier** — parse the authorization record, verify the WebAuthn envelope for the root-to-access-key delegation, then verify the VC's own standard proof
 
 ## Honest Summary
 
@@ -185,19 +192,9 @@ If we wanted this to work for midnightOS:
 | Transporting via DC API (no HTTPS)                     | Supported — DC API is protocol-agnostic            |
 | Secure enclave as "issuer" (self-issuance)             | Unconventional but mechanically possible           |
 | Full multi-step OpenID4VCI over DC API                 | Requires pre-authorized code flow, single-exchange |
-| Root key signing VC directly with WebAuthn             | Blocked — needs custom proof type                  |
-| Root key delegating to access key, access key signs VC | Works cleanly — matches existing demo              |
+| Root key signing VC directly via WebAuthn envelope     | Works with a custom proof type (Option A)          |
+| Root key delegating to access key, access key signs VC | Works with standard proof types (Option B)         |
 | Storing result in identity wallets                     | Standard — it's a valid W3C VC                     |
-
-## Recommendation
-
-Since we control the whole chain (midnightOS + Nightstream verifier), **Option A becomes more attractive**. The main downside of Option A — non-portability of a custom `Es256WebAuthn` proof type — only matters if you care about third-party W3C VC verifiers. For credentials that are consumed by Nightstream circuits or a midnightOS-aware verifier, we can define whatever proof type we want.
-
-Sui took this approach successfully: they defined a new signature scheme (flag `0x06`) and updated their validators to understand it. Same playbook works here — we define a cryptosuite like `webauthn-p256-2026` that carries `{authenticatorData, clientDataJSON, signature}` in the proof, and our verifier knows how to unwrap it. The root key is the direct issuer, the delegation model is clean, no indirection needed.
-
-Option B still makes sense if we want the VCs to be portable to existing W3C VC tooling (1Password, Apple Wallet, standard SSI verifiers) — but for first-party consumption, Option A is cleaner.
-
-**Suggested path**: start with Option A for the midnightOS-native case (chain-verified credentials), add Option B later if we need portability to the broader SSI ecosystem.
 
 ## Sources
 
