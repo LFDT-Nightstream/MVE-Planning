@@ -52,6 +52,7 @@ We have the following investigations:
 - [ ] zkME (and other groth16 approaches?)
 - [ ] Handling metadata associated with the key (ex: which dApps they have installed, private state for those dApps, etc.)
 - [ ] Associating data in a smart contract OCI registry with DIDs
+- [x] OpenID4VCI + Digital Credentials API [investigation](./human-investigation/openid4vci-dc-api.md)
 
 ### Misc
 
