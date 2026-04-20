@@ -66,7 +66,9 @@ We have the following investigations:
         - An implementation of an accumulator (lattice version of [CL](https://eprint.iacr.org/2001/019.pdf)) based on LaZer found in [Lattice-Based Accumulator and Application to Anonymous Credential Revocation](https://eprint.iacr.org/2025/1099)
         - Lattice version of BBS based on this technique appears in [Lattice-based Proof-Friendly Signatures from Vanishing Short Integer Solutions](https://eprint.iacr.org/2025/356)
     - BlindFold (introduced in [HyperNova: Recursive arguments for customizable constraint systems](https://eprint.iacr.org/2023/573), used in [Vega](https://eprint.iacr.org/2025/2094) and implemented in Jolt)
+    - Blind signatures in general in the lattice setting
 - [ ] Privacy in the lattice setting
 - [ ] Folding-friendly Twist & Shout
 - [ ] Tensor generalization of lattices (esp. in the context of hardware acceleration)
 - [ ] Settle Nightstream via KZG
+- [ ] Dynamic step size for folding (per-user/per-contract/etc)
