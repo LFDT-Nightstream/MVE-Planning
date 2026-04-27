@@ -54,8 +54,15 @@ We have the following investigations:
     - Possibly leverage ideas from [ZODA](https://eprint.iacr.org/2025/034)
 - [ ] Lattice-friendly address scheme
 - [ ] Lattice-friendly MPC
+    - See [this investigation](../human-investigation/mpc.md)
+    - [This MPC-in-the-Head paper](https://cic.iacr.org/p/1/1/3/pdf) mentions (elliptic curve) Spartan working well with MPC
 - [ ] Lattice-friendly PCS
-- [ ] Lattice-friendly Dory
+    - There are some papers on this topic like [Greygound](https://eprint.iacr.org/2024/1293)
+    - [Spartan](github.com/microsoft/Spartan2/) (used in Nightstream) uses a "SPARK" construction to "transform any existing extractable polynomial commitment scheme for multilinear polynomials to one that efficiently handles sparse multilinear polynomials"
+        - SPARK doesn't work with hash-based PCS (like the throwaway FRI-based PCS currently used by Nightstream) as mentioned here.
+            - Probably wrong solution: possibly solvable with hash-based as described in [Twist and Shout via logup](https://powdr.org/papers/twist_shout_logup_star.pdf)
+            - Probably right solution: have something that properly works in the ring / lattice setting. [GlueLUT](https://eprint.iacr.org/2026/494.pdf) paper may contain some inspirations 
+- [ ] Lattice-friendly [Dory](https://github.com/a16z/dory) similar to usage in Jolt
     - Ideas for this in [SuperNeo](https://eprint.iacr.org/2026/242)
 - [ ] Lattice-friendly anonymous credentials
   potential papers:
