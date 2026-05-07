@@ -2,8 +2,8 @@
 
 This document is meant to track investigations into the end-goal user/developer experience for the Midnight OS, which drives requirements for
 
-- Nightstream
-- Starstream mock-ledger
+- [Nightstream](https://github.com/LFDT-Nightstream/Nightstream) (lattice based proving system)
+- [Starstream](https://github.com/LFDT-Nightstream/Starstream) (post-quantum UTXO contracts) and its ledger implementation
 
 This repository is split into the following folders:
 
